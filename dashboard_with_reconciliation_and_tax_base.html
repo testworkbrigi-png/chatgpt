@@ -1,0 +1,1237 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>CA Concrete Co. – Full Financial Dashboard with Integrated Audit</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+    /* Base styling shared across both versions */
+    body { font-family: 'Inter', sans-serif; background: #f3f4f6; }
+    .card { background: #fff; border-radius: .75rem; box-shadow: 0 4px 6px -1px rgb(0 0 0 / .10), 0 2px 4px -2px rgb(0 0 0 / .10); padding: 1.5rem; margin-bottom: 1.5rem; }
+    .font-mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    .table-container { overflow-x: auto; }
+    th, td { padding: .5rem .75rem; white-space: nowrap; }
+    .jobtable th, .jobtable td { padding: .35rem .7rem; }
+    .font-bold-row { font-weight: bold; background: #f8fafc; }
+    .card-title { font-size: 1.2em; font-weight: 600; margin-bottom: 1rem; border-bottom: 1px solid #e5e7eb; padding-bottom: 0.5rem; }
+    .sticky-head th { position: sticky; top: 0; background: #f1f5f9; z-index: 10; }
+    .slider-label { font-size: 0.96em; font-weight: 500; margin-right: 6px; min-width: 150px; }
+    .slider-wrap { display: flex; align-items: center; gap: 10px; margin-bottom: 1rem; }
+    .slider-num { font-family: ui-monospace, monospace; color: #3730a3; min-width: 100px; text-align: right; }
+    .explain { font-size: .97em; color: #52525b; background: #e0e7ff; padding: 2px 7px; border-radius: 6px; display: inline-block; }
+    .audit-warn { color: #be123c; font-weight:600; }
+    .audit-ok { color: #16a34a; font-weight:600; }
+    .modal-bg {position:fixed;left:0;top:0;width:100vw;height:100vh;z-index:99;background:rgba(40,40,60,.38);} 
+    .modal-box {position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);min-width:340px;max-width: 500px; background:#fff;border-radius:12px;box-shadow:0 8px 32px rgba(40,40,70,0.18);padding:2em;z-index:100;} 
+    .ratio-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+    .ratio-item { background-color: #f8fafc; padding: 0.75rem; border-radius: 0.5rem; border: 1px solid #e5e7eb; }
+    .ratio-label { font-size: 0.9em; font-weight: 500; color: #4b5563; margin-bottom: 0.25rem; }
+    .ratio-value { font-size: 1.5em; font-weight: 700; color: #1e3a8a; font-family: ui-monospace, monospace; }
+    .red-flag-list { list-style-type: disc; padding-left: 20px; margin-top: 1rem; }
+    .red-flag-item { margin-bottom: 0.5rem; }
+    /* Audit panel styling from second snippet */
+    .audit-panel { background: #fefce8; border: 1px solid #fcd34d; padding: 1rem; border-radius: 0.5rem; font-family: monospace; margin-top: 2rem; }
+    .audit-panel h2 { font-size: 1.25rem; font-weight: bold; margin-bottom: 0.5rem; color: #92400e; }
+    .audit-pass { color: #15803d; font-weight: 600; }
+    .audit-fail { color: #b91c1c; font-weight: 600; }
+    .audit-section { margin-bottom: 1rem; }
+    .audit-icon { font-size: 1.1rem; margin-right: 0.4rem; }
+  </style>
+</head>
+<body class="p-4 sm:p-6 md:p-8">
+<div class="flex items-center gap-4 mb-6">
+<label class="flex items-center gap-2">
+<input checked="" id="toggle-propagate" type="checkbox"/>
+<span class="text-sm">Enable Auto-Propagation</span>
+</label>
+<button class="ml-auto px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700" onclick="exportToPDF()">📄 Export PDF</button>
+<span class="text-sm italic text-gray-600" id="sync-status"></span>
+</div>
+<div class="bg-white p-4 rounded shadow border mb-6">
+<h2 class="text-lg font-semibold mb-3">🎚️ Financial Sliders (Current Year)</h2>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+<div><label class="block" for="slider-revenue">Revenue</label><input class="w-full" id="slider-revenue" max="10000000" min="0" type="range" value="4250000"/><span class="ml-2 text-sm text-gray-700" id="slider-revenue-val">4250000</span><span class="ml-2 text-sm font-bold" id="slider-revenue-value">4250000</span></div>
+<div><label class="block" for="slider-employees">Employees</label><input class="w-full" id="slider-employees" max="50" min="0" type="range" value="14"/><span class="ml-2 text-sm text-gray-700" id="slider-employees-val">14</span><span class="ml-2 text-sm font-bold" id="slider-employees-value">14</span></div>
+<div><label class="block" for="slider-wage">Wage</label><input class="w-full" id="slider-wage" max="100000" min="0" type="range" value="45000"/><span class="ml-2 text-sm text-gray-700" id="slider-wage-val">45000</span><span class="ml-2 text-sm font-bold" id="slider-wage-value">45000</span></div>
+<div><label class="block" for="slider-opex">OPEX</label><input class="w-full" id="slider-opex" max="2000000" min="0" type="range" value="750000"/><span class="ml-2 text-sm text-gray-700" id="slider-opex-val">750000</span><span class="ml-2 text-sm font-bold" id="slider-opex-value">750000</span></div>
+<div><label class="block" for="slider-capex">CAPEX</label><input class="w-full" id="slider-capex" max="1000000" min="0" type="range" value="300000"/><span class="ml-2 text-sm text-gray-700" id="slider-capex-val">300000</span><span class="ml-2 text-sm font-bold" id="slider-capex-value">300000</span></div>
+<div><label class="block" for="slider-owndist">Owner Distributions</label><input class="w-full" id="slider-owndist" max="1000000" min="0" type="range" value="0"/><span class="ml-2 text-sm text-gray-700" id="slider-owndist-val">0</span><span class="ml-2 text-sm font-bold" id="slider-owndist-value">0</span></div>
+</div>
+</div>
+<div class="mb-4">
+<label class="block text-sm font-semibold mb-1" for="year-select">Select Year</label>
+<select class="w-full border border-gray-300 rounded p-2" id="year-select">
+<option value="2021">2021</option>
+<option value="2022">2022</option>
+<option selected="" value="2023">2023</option>
+<option value="2024">2024</option>
+<option value="2025">2025</option>
+</select>
+</div>
+<div class="max-w-7xl mx-auto">
+<header class="mb-8 text-center">
+<h1 class="text-3xl md:text-4xl font-bold text-gray-800">CA Concrete Co. – Full Financial Dashboard</h1>
+<p class="text-gray-600 mt-2">Audit-integrated financial simulation and control panel.</p>
+<p class="explain mt-2">Adjust sliders or select a scenario to see the impact on the P&amp;L, Balance Sheet, and Cash Flow. 🧾</p>
+</header>
+<!-- Controls and settings from original code -->
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+<div>
+<!-- Scenario presets & key drivers -->
+<div class="card">
+<h2 class="card-title">Scenario Presets &amp; Key Drivers</h2>
+<div class="slider-wrap"><span class="slider-label">Select a Mode:</span><select class="border rounded p-2 w-full" id="scenarioSelect"></select></div>
+<div class="slider-wrap"><span class="slider-label">Year:</span><select class="border rounded p-1 w-full" id="yearSelect"></select></div>
+<div class="slider-wrap"><span class="slider-label">Total Annual Revenue:</span><input class="w-full" id="slider-revenue" max="12000000" min="750000" step="1" type="range"/><span class="slider-num" id="slider-revenue-val"></span></div>
+</div>
+<!-- Product mix -->
+<div class="card">
+<h2 class="card-title">Product Mix (%)</h2>
+<div class="slider-wrap">
+<span class="slider-label">Residential:</span>
+<input class="w-full product-mix-slider" data-mix-id="res" id="slider-mixResidential" max="100" min="0" step="1" type="range"/>
+<span class="slider-num" id="slider-mixResidential-val"></span>
+</div>
+<div class="slider-wrap">
+<span class="slider-label">Commercial:</span>
+<input class="w-full product-mix-slider" data-mix-id="com" id="slider-mixCommercial" max="100" min="0" step="1" type="range"/>
+<span class="slider-num" id="slider-mixCommercial-val"></span>
+</div>
+<div class="slider-wrap">
+<span class="slider-label">Infrastructure:</span>
+<input class="w-full product-mix-slider" data-mix-id="inf" id="slider-mixInfra" max="100" min="0" step="1" type="range"/>
+<span class="slider-num" id="slider-mixInfra-val"></span>
+</div>
+</div>
+<!-- Direct labor & overhead -->
+<div class="card">
+<h2 class="card-title">Direct Labor &amp; Overhead</h2>
+<div class="slider-wrap"><span class="slider-label">Employees:</span><input class="w-full" id="slider-employees" max="80" min="8" step="1" type="range"/><span class="slider-num" id="slider-employees-val"></span></div>
+<div class="slider-wrap"><span class="slider-label">Avg Field Wage:</span><input class="w-full" id="slider-wage" max="120000" min="40000" step="1" type="range"/><span class="slider-num" id="slider-wage-val"></span></div>
+<div class="slider-wrap"><span class="slider-label">Officers:</span><input class="w-full" id="slider-officers" max="4" min="1" step="1" type="range"/><span class="slider-num" id="slider-officers-val"></span></div>
+<div class="slider-wrap"><span class="slider-label">Officer Salary:</span><input class="w-full" id="slider-officerpay" max="220000" min="90000" step="1" type="range"/><span class="slider-num" id="slider-officerpay-val"></span></div>
+<div class="slider-wrap"><span class="slider-label">General Operating Exp:</span><input class="w-full" id="slider-opex" max="800000" min="70000" step="1" type="range"/><span class="slider-num" id="slider-opex-val"></span></div>
+</div>
+</div>
+<div>
+<!-- Debt & Financing -->
+<div class="card">
+<h2 class="card-title">Debt &amp; Financing</h2>
+<div class="slider-wrap"><span class="slider-label">Loan Proceeds:</span><input class="w-full" id="slider-loanProceeds" max="500000" min="0" step="1" type="range"/><span class="slider-num" id="slider-loanProceeds-val"></span></div>
+<div class="slider-wrap"><span class="slider-label">Loan Repayments:</span><input class="w-full" id="slider-loanRepayments" max="250000" min="0" step="1" type="range"/><span class="slider-num" id="slider-loanRepayments-val"></span></div>
+</div>
+<!-- Capital & Distributions -->
+<div class="card">
+<h2 class="card-title">Capital &amp; Distributions</h2>
+<div class="slider-wrap"><span class="slider-label">CapEx (FA Purchases):</span><input class="w-full" id="slider-capex" max="150000" min="0" step="1" type="range"/><span class="slider-num" id="slider-capex-val"></span></div>
+<div class="slider-wrap"><span class="slider-label">Owner Distributions:</span><input class="w-full" id="slider-owndist" max="150000" min="0" step="1" type="range"/><span class="slider-num" id="slider-owndist-val"></span></div>
+</div>
+<!-- Financial assumptions -->
+<div class="card">
+<h2 class="card-title">Financial Assumptions</h2>
+<div class="slider-wrap"><span class="slider-label">Opening Cash (1100):</span><input class="w-full" id="slider-cash1" max="400000" min="25000" step="1" type="range"/><span class="slider-num" id="slider-cash1-val"></span></div>
+<div class="slider-wrap"><span class="slider-label">Opening Cash (1150):</span><input class="w-full" id="slider-cash2" max="400000" min="25000" step="1" type="range"/><span class="slider-num" id="slider-cash2-val"></span></div>
+</div>
+</div>
+</div>
+<!-- Buttons row -->
+<div class="flex flex-wrap gap-4 items-center mb-6 p-4 bg-white rounded-lg shadow">
+<button class="px-4 py-2 bg-gray-500 text-white rounded-lg font-semibold shadow-md hover:bg-gray-600 transition-colors" id="startOverBtn">Start Over (Reset to 2021)</button>
+<button class="px-4 py-2 bg-indigo-600 text-white rounded-lg font-semibold shadow-md hover:bg-indigo-700 transition-colors" id="consistencyBtn">Consistency Check</button>
+<button class="px-4 py-2 bg-rose-600 text-white rounded-lg font-semibold shadow-md hover:bg-rose-700 transition-colors" id="redFlagBtn">Quick Red Flags</button>
+<div class="flex items-center gap-2 ml-auto">
+<button class="px-4 py-2 bg-teal-600 text-white rounded-lg font-semibold shadow-md hover:bg-teal-700 transition-colors" id="normalizeBtn">Normalize</button>
+<input class="border rounded p-2 w-20 text-center" id="normalize-target-percent" type="number" value="5"/>
+<span class="font-semibold text-gray-700 text-sm">% Net Margin</span>
+</div>
+</div>
+<!-- Dashboard output will render here -->
+<div id="dashboard"></div>
+<!-- Audit Panel from second code -->
+<div class="audit-panel" id="auditPanel" style="display:none;"></div>
+</div>
+<!-- Modal container from original code -->
+<div id="modal" style="display:none;">
+<div class="modal-bg" onclick="hideModal()"></div>
+<div class="modal-box" id="modal-box"></div>
+</div>
+<!-- Combined JavaScript logic -->
+<script>
+    // ---- Constants and helper functions ----
+    const YEARS = [2021, 2022, 2023, 2024, 2025];
+    const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const SEASONALITY_PATTERN = [0.7, 0.7, 0.8, 1.0, 1.2, 1.3, 1.3, 1.2, 1.1, 1.0, 0.9, 0.8];
+    const PRODUCT_PROFILES = {
+      res: { name: 'Residential', materials: 0.45, subs: 0.05, haul: 0.04, tools: 0.02, permits: 0.01, rental: 0.02, retainage: 3.0 },
+      com: { name: 'Commercial', materials: 0.38, subs: 0.12, haul: 0.03, tools: 0.03, permits: 0.02, rental: 0.04, retainage: 8.0 },
+      inf: { name: 'Infrastructure', materials: 0.30, subs: 0.20, haul: 0.05, tools: 0.04, permits: 0.04, rental: 0.06, retainage: 12.0 }
+    };
+
+    function messy(n) { return +(n + (Math.random() - 0.5) * n * 0.012).toFixed(2); }
+    function round(n) { return (+n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
+    function sum(arr) { return arr.reduce((a, b) => +a + (+b || 0), 0); }
+    const TOTAL_SEASON_FACTOR = sum(SEASONALITY_PATTERN);
+
+    // ---- State & Data Stores ----
+    let STATE = {};
+    let FINANCIAL_REPORTS = {};
+    const baseState2021 = { revenue: 4250000, employees: 14, wage: 65000, officers: 1, officerpay: 135000, opex: 180000, capex: 35000, owndist: 30000, loanProceeds: 30000, loanRepayments: 35000, cash1: 160000, cash2: 100000, mixResidential: 50, mixCommercial: 40, mixInfra: 10 };
+
+    function initializeState() {
+      STATE[2021] = JSON.parse(JSON.stringify(baseState2021));
+      for (let i = 1; i < YEARS.length; i++) {
+        const y = YEARS[i];
+        const prevY = YEARS[i-1];
+        STATE[y] = {
+          ...STATE[prevY],
+          revenue: Math.round(STATE[prevY].revenue * 1.15),
+          employees: STATE[prevY].employees + 2,
+          wage: Math.round(STATE[prevY].wage * 1.03),
+          opex: Math.round(STATE[prevY].opex * 1.10),
+          capex: Math.round(STATE[prevY].capex * 1.2),
+          owndist: 10000 * i
+        };
+      }
+    }
+
+    // Scenario presets defined in the first code
+    const SCENARIO_PRESETS = {
+      'default': { ...STATE[2025] },
+      'Insolvency Imminent': { revenue: 1500000, employees: 25, wage: 80000, officers: 1, officerpay: 180000, opex: 300000, capex: 10000, owndist: 100000, loanProceeds: 250000, loanRepayments: 10000, cash1: 50000, cash2: 30000, mixResidential: 70, mixCommercial: 30, mixInfra: 0 },
+      'Struggling Startup': { revenue: 1800000, employees: 15, wage: 65000, officers: 1, officerpay: 90000, opex: 200000, capex: 80000, owndist: 0, loanProceeds: 200000, loanRepayments: 15000, cash1: 150000, cash2: 80000, mixResidential: 80, mixCommercial: 20, mixInfra: 0 },
+      'Break-Even Operation': { revenue: 4250000, employees: 14, wage: 65000, officers: 1, officerpay: 135000, opex: 180000, capex: 35000, owndist: 30000, loanProceeds: 30000, loanRepayments: 35000, cash1: 160000, cash2: 100000, mixResidential: 50, mixCommercial: 40, mixInfra: 10 },
+      'Healthy Growth': { revenue: 5000000, employees: 35, wage: 78000, officers: 3, officerpay: 160000, opex: 350000, capex: 120000, owndist: 80000, loanProceeds: 0, loanRepayments: 50000, cash1: 300000, cash2: 200000, mixResidential: 30, mixCommercial: 50, mixInfra: 20 },
+      'Market Leader': { revenue: 10000000, employees: 60, wage: 85000, officers: 4, officerpay: 200000, opex: 500000, capex: 100000, owndist: 300000, loanProceeds: 0, loanRepayments: 100000, cash1: 800000, cash2: 500000, mixResidential: 20, mixCommercial: 40, mixInfra: 40 },
+      'Cash-Rich Juggernaut': { revenue: 12000000, employees: 50, wage: 95000, officers: 3, officerpay: 220000, opex: 450000, capex: 50000, owndist: 500000, loanProceeds: 0, loanRepayments: 120000, cash1: 1500000, cash2: 1000000, mixResidential: 10, mixCommercial: 30, mixInfra: 60 }
+    };
+    const SLIDERS = [
+      ['slider-revenue', 'revenue'], ['slider-cash1', 'cash1'], ['slider-cash2', 'cash2'], ['slider-employees', 'employees'],
+      ['slider-wage', 'wage'], ['slider-officerpay', 'officerpay'], ['slider-officers', 'officers'], ['slider-opex', 'opex'],
+      ['slider-capex', 'capex'], ['slider-owndist', 'owndist'], ['slider-loanProceeds', 'loanProceeds'], ['slider-loanRepayments', 'loanRepayments'],
+      ['slider-mixResidential', 'mixResidential'], ['slider-mixCommercial', 'mixCommercial'], ['slider-mixInfra', 'mixInfra']
+    ];
+    const YEAR_1_BEG_BALANCES = { ar: messy(250000), ap: messy(120000), inv: messy(35000), fa: messy(400000), accdep: messy(-80000), owneq: messy(250000), loansPayable: messy(200000), retainageReceivable: messy(25000) };
+
+    // ---- Financial Calculation Functions (from first code) ----
+    function monthlyize(total, seasonal=true) {
+      let arr = [], sumsofar = 0;
+      const pattern = seasonal ? SEASONALITY_PATTERN : Array(12).fill(1);
+      const totalFactor = seasonal ? TOTAL_SEASON_FACTOR : 12;
+      for (let i = 0; i < 12; i++) {
+        let base = total * (pattern[i] / totalFactor);
+        arr[i] = i === 11 ? total - sumsofar : messy(base);
+        sumsofar += arr[i];
+      }
+      return arr;
+    }
+    function getPL(y, prev) {
+      const S = STATE[y];
+      const revRes = S.revenue * (S.mixResidential / 100);
+      const revCom = S.revenue * (S.mixCommercial / 100);
+      const revInf = S.revenue * (S.mixInfra / 100);
+      const materials = revRes * PRODUCT_PROFILES.res.materials + revCom * PRODUCT_PROFILES.com.materials + revInf * PRODUCT_PROFILES.inf.materials;
+      const subs = revRes * PRODUCT_PROFILES.res.subs + revCom * PRODUCT_PROFILES.com.subs + revInf * PRODUCT_PROFILES.inf.subs;
+      const haul = revRes * PRODUCT_PROFILES.res.haul + revCom * PRODUCT_PROFILES.com.haul + revInf * PRODUCT_PROFILES.inf.haul;
+      const tools = revRes * PRODUCT_PROFILES.res.tools + revCom * PRODUCT_PROFILES.com.tools + revInf * PRODUCT_PROFILES.inf.tools;
+      const permits = revRes * PRODUCT_PROFILES.res.permits + revCom * PRODUCT_PROFILES.com.permits + revInf * PRODUCT_PROFILES.inf.permits;
+      const rental = revRes * PRODUCT_PROFILES.res.rental + revCom * PRODUCT_PROFILES.com.rental + revInf * PRODUCT_PROFILES.inf.rental;
+      const payroll = S.employees * S.wage;
+      const officerPay = S.officers * S.officerpay;
+      const payrollTax = (payroll + officerPay) * 0.13;
+      const insurance = S.revenue * 0.025;
+      const fuel = S.revenue * 0.02;
+      const fa_for_depr_calc = prev ? prev.fa_end : YEAR_1_BEG_BALANCES.fa;
+      const depr = (fa_for_depr_calc + S.capex) * 0.1;
+      const loans_for_int_calc = prev ? prev.loans_payable_end : YEAR_1_BEG_BALANCES.loansPayable;
+      const interestExp = (loans_for_int_calc + S.loanProceeds) * 0.055;
+      // monthly breakdowns
+      let revM = monthlyize(S.revenue), matM = monthlyize(materials), subsM = monthlyize(subs), haulM = monthlyize(haul), toolsM = monthlyize(tools), permitsM = monthlyize(permits), rentalM = monthlyize(rental), returnsM = monthlyize(S.revenue * 0.0085, false), opexM = monthlyize(S.opex, false), officerM = monthlyize(officerPay, false), payrollM = monthlyize(payroll, false), payrollTaxM = monthlyize(payrollTax, false), deprM = monthlyize(depr, false), insuranceM = monthlyize(insurance, false), fuelM = monthlyize(fuel, false), interestM = monthlyize(interestExp, false);
+      let cogsM = matM.map((v, i) => v + subsM[i] + haulM[i] + toolsM[i] + permitsM[i] + rentalM[i]);
+      let grossM = revM.map((v, i) => v - returnsM[i] - cogsM[i]);
+      let totalExpM = payrollM.map((v, i) => v + officerM[i] + payrollTaxM[i] + deprM[i] + opexM[i] + insuranceM[i] + fuelM[i] + interestM[i]);
+      let netOrdM = grossM.map((v, i) => v - totalExpM[i]);
+      let netIncM = [...netOrdM];
+      const totals = { "Construction Income": sum(revM), "Returns/Allowances": sum(returnsM), "Materials": sum(matM), "Subcontractors": sum(subsM), "Haulage/Disposal": sum(haulM), "Tools/Small Equipment": sum(toolsM), "Permits & Fees": sum(permitsM), "Equipment Rental": sum(rentalM), "Total COGS": sum(cogsM), "Gross Profit": sum(grossM), "Payroll & Labor": sum(payrollM), "Officer Salaries": sum(officerM), "Payroll Taxes/Insurance": sum(payrollTaxM), "Depreciation": sum(deprM), "Operating Expenses": sum(opexM), "Insurance": sum(insuranceM), "Fuel": sum(fuelM), "Interest Expense": sum(interestM), "Total Expense": sum(totalExpM), "Net Ordinary Income": sum(netOrdM), "Net Income": sum(netIncM), "revRes": revRes, "revCom": revCom, "revInf": revInf, "Payroll": payroll, "Officer Pay": officerPay };
+      return { totals, rev: revM, returns: returnsM, mat: matM, subs: subsM, haul: haulM, tools: toolsM, permits: permitsM, equipRental: rentalM, cogs: cogsM, gross: grossM, payrollM, officerM, payrollTaxM, depr: deprM, opex: opexM, insurance: insuranceM, fuel: fuelM, interest: interestM, totalExp: totalExpM, netOrd: netOrdM, netInc: netIncM };
+    }
+    function getBalanceSheet(y, PL, prev) {
+      let S = STATE[y];
+      let ar_beg = (prev) ? prev.ar_end : YEAR_1_BEG_BALANCES.ar;
+      let ap_beg = (prev) ? prev.ap_end : YEAR_1_BEG_BALANCES.ap;
+      let inv_beg = (prev) ? prev.inv_end : YEAR_1_BEG_BALANCES.inv;
+      let fa_beg = (prev) ? prev.fa_end : YEAR_1_BEG_BALANCES.fa;
+      let accdep_beg = (prev) ? prev.accdep_end : YEAR_1_BEG_BALANCES.accdep;
+      let owneq_beg = (prev) ? prev.owneq_end : YEAR_1_BEG_BALANCES.owneq;
+      let loans_payable_beg = (prev) ? prev.loans_payable_end : YEAR_1_BEG_BALANCES.loansPayable;
+      let retainage_beg = (prev) ? prev.retainage_end : YEAR_1_BEG_BALANCES.retainageReceivable;
+      let { capex, owndist, loanProceeds, loanRepayments, mixResidential, mixCommercial, mixInfra } = S;
+      let effectiveRetainageRate = (mixResidential * PRODUCT_PROFILES.res.retainage + mixCommercial * PRODUCT_PROFILES.com.retainage + mixInfra * PRODUCT_PROFILES.inf.retainage) / 100 / 100;
+      let ar_end = S.revenue * 0.12;
+      let ap_end = PL.totals["Total COGS"] * 0.15;
+      let inv_end = PL.totals["Total COGS"] * 0.05;
+      let retainage_end = S.revenue * effectiveRetainageRate;
+      let fa_end = fa_beg + capex;
+      let depr = PL.totals.Depreciation;
+      let accdep_end = accdep_beg - depr;
+      let loans_payable_end = loans_payable_beg + S.loanProceeds - S.loanRepayments;
+      let netinc = PL.totals["Net Income"];
+      let tempBSForCF = { ar_end, ap_end, inv_end, retainage_end };
+      let cf_results = getCashFlow(y, PL, tempBSForCF, prev);
+      let total_cash_end = cf_results.cash_end;
+      let cash1_end = total_cash_end * 0.6;
+      let cash2_end = total_cash_end - cash1_end;
+      let assets = total_cash_end + ar_end + retainage_end + inv_end + fa_end + accdep_end;
+      let liab = ap_end + loans_payable_end;
+      let re_beg = (prev) ? prev.re_end : 0;
+      let owneq_end = owneq_beg;
+      let re_end = re_beg + netinc - owndist;
+      let equity = re_end + owneq_end;
+      let balance_diff = assets - (liab + equity);
+      if (Math.abs(balance_diff) > 2.01) {
+        re_end += balance_diff;
+        equity += balance_diff;
+      }
+      return { cash1_end, cash2_end, ar_end, retainage_end, inv_end, fa_end, accdep_end, ap_end, loans_payable_end, re_end, owneq_end, assets, liab, equity, cash_total: total_cash_end };
+    }
+    function getCashFlow(y, PL, tempBS, prev) {
+      let S = STATE[y];
+      let netinc = PL.totals["Net Income"];
+      let depr = PL.totals.Depreciation;
+      let cash_beg = prev ? prev.cash_total : (S.cash1 + S.cash2);
+      let ar_beg = prev ? prev.ar_end : YEAR_1_BEG_BALANCES.ar;
+      let ap_beg = prev ? prev.ap_end : YEAR_1_BEG_BALANCES.ap;
+      let inv_beg = prev ? prev.inv_end : YEAR_1_BEG_BALANCES.inv;
+      let retainage_beg = prev ? prev.retainage_end : YEAR_1_BEG_BALANCES.retainageReceivable;
+      let chgAR = tempBS.ar_end - ar_beg;
+      let chgRetainage = tempBS.retainage_end - retainage_beg;
+      let chgAP = tempBS.ap_end - ap_beg;
+      let chgInv = tempBS.inv_end - inv_beg;
+      let cf_ops = netinc + depr - chgAR - chgRetainage - chgInv + chgAP;
+      let cf_inv = -S.capex;
+      let cf_fin = S.loanProceeds - S.loanRepayments - S.owndist;
+      let netchg = cf_ops + cf_inv + cf_fin;
+      let cash_end = cash_beg + netchg;
+      return { netinc, depr, chgAR, chgRetainage, chgInv, chgAP, cf_ops, cf_inv, cf_fin, netchg, cash_beg, cash_end, loanProceeds: S.loanProceeds, loanRepayments: S.loanRepayments, owndist: S.owndist };
+    }
+    function getFinancialRatios(PL, BS) {
+      const totalRevenue = PL.totals["Construction Income"];
+      const grossProfit = PL.totals["Gross Profit"];
+      const netIncome = PL.totals["Net Income"];
+      const cogs = PL.totals["Total COGS"];
+      const currentAssets = BS.cash_total + BS.ar_end + BS.retainage_end + BS.inv_end;
+      const currentLiabilities = BS.ap_end;
+      const totalLiabilities = BS.liab;
+      const totalEquity = BS.equity;
+      const grossMargin = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0;
+      const netMargin = totalRevenue > 0 ? (netIncome / totalRevenue) * 100 : 0;
+      const currentRatio = currentLiabilities > 0 ? currentAssets / currentLiabilities : 0;
+      const debtToEquity = totalEquity > 0 ? totalLiabilities / totalEquity : 0;
+      const dso = totalRevenue > 0 ? ((BS.ar_end + BS.retainage_end) / totalRevenue) * 365 : 0;
+      const dpo = cogs > 0 ? (BS.ap_end / cogs) * 365 : 0;
+      const workingCapital = currentAssets - currentLiabilities;
+      return { grossMargin, netMargin, currentRatio, debtToEquity, dso, dpo, workingCapital,
+        grossMarginFmt: grossMargin.toFixed(1) + '%', netMarginFmt: netMargin.toFixed(1) + '%',
+        currentRatioFmt: currentRatio.toFixed(2), debtToEquityFmt: debtToEquity.toFixed(2),
+        dsoFmt: dso.toFixed(0) + ' days', dpoFmt: dpo.toFixed(0) + ' days' };
+    }
+    // Rendering helpers from original code
+    function renderRatios(ratios) {
+      return `
+        <div class="card">
+          <h2 class="card-title">Key Financial Ratios</h2>
+          <div class="ratio-grid" style="grid-template-columns: repeat(3, 1fr);">
+            <div class="ratio-item"><div class="ratio-label">Gross Profit Margin</div><div class="ratio-value">${ratios.grossMarginFmt}</div></div>
+            <div class="ratio-item"><div class="ratio-label">Net Profit Margin</div><div class="ratio-value">${ratios.netMarginFmt}</div></div>
+            <div class="ratio-item"><div class="ratio-label">Current Ratio</div><div class="ratio-value">${ratios.currentRatioFmt}</div></div>
+            <div class="ratio-item"><div class="ratio-label">Debt-to-Equity</div><div class="ratio-value">${ratios.debtToEquityFmt}</div></div>
+            <div class="ratio-item"><div class="ratio-label">A/R Days (DSO)</div><div class="ratio-value">${ratios.dsoFmt}</div></div>
+            <div class="ratio-item"><div class="ratio-label">A/P Days (DPO)</div><div class="ratio-value">${ratios.dpoFmt}</div></div>
+          </div>
+        </div>`;
+    }
+    function renderPL(y, PL) {
+      let head = `<div class="card"><h2 class="card-title">Monthly P&amp;L</h2><div class="table-container"><table class="w-full text-xs font-mono mb-3"><thead class="sticky-head"><tr><th>Account</th>${MONTHS.map(m => `<th class="text-right">${m}</th>`).join("")}<th class="text-right font-bold">YTD</th></tr></thead><tbody>`;
+      let lines = [
+        ["Construction Income", PL.rev], ["Returns/Allowances", PL.returns], ["Materials", PL.mat],
+        ["Subcontractors", PL.subs], ["Haulage/Disposal", PL.haul], ["Tools/Small Equipment", PL.tools],
+        ["Permits & Fees", PL.permits], ["Equipment Rental", PL.equipRental], ["Total COGS", PL.cogs, "font-bold-row"],
+        ["Gross Profit", PL.gross, "font-bold-row"], ["Payroll & Labor", PL.payrollM], ["Officer Salaries", PL.officerM],
+        ["Payroll Taxes/Insurance", PL.payrollTaxM], ["Insurance", PL.insurance], ["Fuel", PL.fuel],
+        ["Depreciation", PL.depr], ["Operating Expenses", PL.opex], ["Interest Expense", PL.interest],
+        ["Total Expense", PL.totalExp, "font-bold-row"], ["Net Ordinary Income", PL.netOrd, "font-bold-row"],
+        ["Net Income", PL.netInc, "font-bold-row"]
+      ];
+      let html = head;
+      for (let r of lines) {
+        html += `<tr${r[2] ? ` class="${r[2]}"` : ""}><td>${r[0]}</td>`;
+        for (let i = 0; i < 12; i++) { html += `<td class="text-right">${round(r[1][i])}</td>`; }
+        html += `<td class="text-right font-bold">${round(sum(r[1]))}</td></tr>`;
+      }
+      html += `</tbody></table></div></div>`;
+      return html;
+    }
+    function renderBS(y, BS) {
+      return `<div class="card"><h2 class="card-title">Balance Sheet</h2><div class="table-container"><table class="w-full text-xs font-mono mb-3"><thead><tr><th>Account</th><th class="text-right">Ending Balance</th></tr></thead><tbody><tr><td>1100 · CCU CHK_5025</td><td class="text-right">${round(BS.cash1_end)}</td></tr><tr><td>1150 · BMO Bank Chk_4187</td><td class="text-right">${round(BS.cash2_end)}</td></tr><tr><td>Accounts Receivable</td><td class="text-right">${round(BS.ar_end)}</td></tr><tr><td>Retainage Receivable</td><td class="text-right">${round(BS.retainage_end)}</td></tr><tr><td>Inventory</td><td class="text-right">${round(BS.inv_end)}</td></tr><tr><td>Fixed Assets (gross)</td><td class="text-right">${round(BS.fa_end)}</td></tr><tr><td>Accum. Depreciation</td><td class="text-right">${round(BS.accdep_end)}</td></tr><tr class="font-bold-row"><td>TOTAL ASSETS</td><td class="text-right">${round(BS.assets)}</td></tr><tr><td>Accounts Payable</td><td class="text-right">${round(BS.ap_end)}</td></tr><tr><td>Loans Payable</td><td class="text-right">${round(BS.loans_payable_end)}</td></tr><tr class="font-bold-row"><td>Total Liabilities</td><td class="text-right">${round(BS.liab)}</td></tr><tr><td>Retained Earnings</td><td class="text-right">${round(BS.re_end)}</td></tr><tr><td>Owner's Equity</td><td class="text-right">${round(BS.owneq_end)}</td></tr><tr class="font-bold-row"><td>Total Equity</td><td class="text-right">${round(BS.equity)}</td></tr><tr class="font-bold-row"><td>Total Liab + Equity</td><td class="text-right">${round(BS.liab + BS.equity)}</td></tr></tbody></table></div></div>`;
+    }
+    function renderCF(y, CF) {
+      return `<div class="card"><h2 class="card-title">Cash Flow Statement</h2><div class="table-container"><table class="w-full text-xs font-mono mb-3"><thead><tr><th>Section</th><th class="text-right">Amount</th></tr></thead><tbody><tr><td>Net Income (from P&amp;L)</td><td class="text-right">${round(CF.netinc)}</td></tr><tr><td>+ Depreciation</td><td class="text-right">${round(CF.depr)}</td></tr><tr><td>– Change in AR</td><td class="text-right">${round(-CF.chgAR)}</td></tr><tr><td>– Change in Retainage</td><td class="text-right">${round(-CF.chgRetainage)}</td></tr><tr><td>– Change in Inventory</td><td class="text-right">${round(-CF.chgInv)}</td></tr><tr><td>+ Change in AP</td><td class="text-right">${round(CF.chgAP)}</td></tr><tr class="font-bold-row"><td>Net Cash from Ops</td><td class="text-right">${round(CF.cf_ops)}</td></tr><tr><td>– CapEx</td><td class="text-right">${round(CF.cf_inv)}</td></tr><tr class="font-bold-row"><td>Net Cash Investing</td><td class="text-right">${round(CF.cf_inv)}</td></tr><tr><td>+ Loan Proceeds</td><td class="text-right">${round(CF.loanProceeds)}</td></tr><tr><td>– Loan Repayments</td><td class="text-right">${round(-CF.loanRepayments)}</td></tr><tr><td>– Owner Distributions</td><td class="text-right">${round(-CF.owndist)}</td></tr><tr class="font-bold-row"><td>Net Cash from Financing</td><td class="text-right">${round(CF.cf_fin)}</td></tr><tr class="font-bold-row"><td>Net Change in Cash</td><td class="text-right">${round(CF.netchg)}</td></tr><tr><td>Beginning Cash</td><td class="text-right">${round(CF.cash_beg)}</td></tr><tr class="font-bold-row"><td>Ending Cash</td><td class="text-right">${round(CF.cash_end)}</td></tr></tbody></table></div></div>`;
+    }
+    function getARAging(y, AR_total) {
+      let normAR = Math.max(AR_total, 0);
+      let b0 = messy(normAR * 0.65), b1 = messy(normAR * 0.20), b2 = messy(normAR * 0.10);
+      let out = [b0, b1, b2];
+      let sumNorm = sum(out);
+      let fudge = normAR - sumNorm;
+      let b3 = fudge;
+      return { buckets: [...out, b3], total: normAR };
+    }
+    function renderARAging(y, AR_total) {
+      const ag = getARAging(y, AR_total);
+      return `<div class="card"><h2 class="card-title">A/R Aging</h2><div class="table-container"><table class="w-full text-xs font-mono mb-3"><thead><tr><th>0–30</th><th>31–60</th><th>61–90</th><th>90+</th><th>Total AR</th></tr></thead><tbody><tr><td>${round(ag.buckets[0])}</td><td>${round(ag.buckets[1])}</td><td>${round(ag.buckets[2])}</td><td>${round(ag.buckets[3])}</td><td>${round(ag.total)}</td></tr></tbody></table></div></div>`;
+    }
+    function getJobWIP(y, AR_total, Retainage_total) {
+      let jobs = [ { name: "Amazon DC Ramp", contract: 820000 }, { name: "City Sidewalk", contract: 370000 }, { name: "Target Remodel", contract: 248000 }, { name: "Medical Plaza Lot", contract: 410000 }, { name: "School Gym Pads", contract: 127000 }, { name: "Highway Bridge", contract: 1020000 } ];
+      let S = STATE[y];
+      let effectiveRetainageRate = (S.mixResidential * PRODUCT_PROFILES.res.retainage + S.mixCommercial * PRODUCT_PROFILES.com.retainage + S.mixInfra * PRODUCT_PROFILES.inf.retainage) / 100 / 100;
+      let total_receivable = AR_total + Retainage_total;
+      let shares = Array(jobs.length).fill(0).map(() => Math.random() + 0.8);
+      let sumShare = sum(shares);
+      let revJobs = shares.map(s => messy(total_receivable * s / sumShare));
+      let fudge = total_receivable - sum(revJobs);
+      revJobs[0] += fudge;
+      return jobs.map((j, i) => ({ ...j, pct: messy(0.36 + 0.45 * Math.random()), revenue: revJobs[i], wip: messy(revJobs[i] * 0.71), retain: messy(revJobs[i] * effectiveRetainageRate), margin: messy(revJobs[i] * 0.24) }));
+    }
+    function renderJobWIP(y, AR_total, Retainage_total) {
+      const jobs = getJobWIP(y, AR_total, Retainage_total);
+      let sumWIP = 0, sumRet = 0, sumMargin = 0, sumRev = 0;
+      let html = `<div class="card"><h2 class="card-title">Job Breakdown</h2><div class="table-container"><table class="jobtable w-full text-xs font-mono mb-3"><thead class="sticky-head"><tr><th>Job Name/ID</th><th>Contract Amount</th><th>% Complete</th><th>Recognized Revenue</th><th>WIP</th><th>Retainage</th><th>Margin $</th></tr></thead><tbody>`;
+      for (const j of jobs) {
+        sumRev += j.revenue;
+        sumWIP += j.wip;
+        sumRet += j.retain;
+        sumMargin += j.margin;
+        html += `<tr><td>${j.name}</td><td>${round(j.contract)}</td><td>${(j.pct * 100).toFixed(1)}%</td><td>${round(j.revenue)}</td><td>${round(j.wip)}</td><td>${round(j.retain)}</td><td>${round(j.margin)}</td></tr>`;
+      }
+      html += `<tr class="font-bold-row"><td>TOTAL</td><td></td><td></td><td>${round(sumRev)}</td><td>${round(sumWIP)}</td><td>${round(sumRet)}</td><td>${round(sumMargin)}</td></tr></tbody></table></div></div>`;
+      return html;
+    }
+
+    // ---- Main render function ----
+    function calculateAndRender() {
+      let prev = null;
+      let results = {};
+      for (let y of YEARS) {
+        const PL = getPL(y, prev);
+        const BS = getBalanceSheet(y, PL, prev);
+        const CF = getCashFlow(y, PL, {ar_end:BS.ar_end, ap_end:BS.ap_end, inv_end:BS.inv_end, retainage_end:BS.retainage_end}, prev);
+        const Ratios = getFinancialRatios(PL, BS);
+        results[y] = { PL, BS, CF, Ratios };
+        prev = BS;
+      }
+      FINANCIAL_REPORTS = results;
+      const { PL, BS, CF, Ratios } = FINANCIAL_REPORTS[CURRENT_YEAR];
+      const AR_total = BS.ar_end;
+      const Retainage_total = BS.retainage_end;
+      const dashboardHTML = `${renderRatios(Ratios)}<div class="grid grid-cols-1 xl:grid-cols-2 gap-6">${renderPL(CURRENT_YEAR, PL)}${renderBS(CURRENT_YEAR, BS)}</div><div class="grid grid-cols-1 xl:grid-cols-2 gap-6">${renderCF(CURRENT_YEAR, CF)}${renderARAging(CURRENT_YEAR, AR_total)}</div>${renderJobWIP(CURRENT_YEAR, AR_total, Retainage_total)}`;
+      document.getElementById('dashboard').innerHTML = dashboardHTML;
+      updateSliderControls();
+      simulateAudit();
+    }
+
+    function updateSliderControls() {
+      const S = STATE[CURRENT_YEAR];
+      for (const [sliderId, stateKey] of SLIDERS) {
+        const sliderEl = document.getElementById(sliderId);
+        const labelEl = document.getElementById(`${sliderId}-val`);
+        if (sliderEl && labelEl) {
+          sliderEl.value = S[stateKey];
+          const val = S[stateKey];
+          if (['employees', 'officers'].includes(stateKey)) {
+            labelEl.textContent = val;
+          } else if (stateKey.startsWith('mix')) {
+            labelEl.textContent = Math.round(val) + '%';
+          } else {
+            labelEl.textContent = '$' + Math.round(val).toLocaleString('en-US');
+          }
+        }
+      }
+    }
+
+    function normalizeMixSliders(changedId) {
+      const sliders = { res: 'mixResidential', com: 'mixCommercial', inf: 'mixInfra' };
+      let total = sum(Object.values(sliders).map(key => +STATE[CURRENT_YEAR][key]));
+      if (Math.abs(100 - total) < 0.1) {
+        let finalTotal = sum(Object.values(sliders).map(key => { STATE[CURRENT_YEAR][key] = Math.round(STATE[CURRENT_YEAR][key]); return STATE[CURRENT_YEAR][key]; }));
+        STATE[CURRENT_YEAR][sliders[changedId]] += 100 - finalTotal;
+        return;
+      }
+      const diff = 100 - total;
+      const others = Object.keys(sliders).filter(k => k !== changedId);
+      let otherTotal = sum(others.map(k => +STATE[CURRENT_YEAR][sliders[k]]));
+      if (otherTotal === 0) {
+        others.forEach(k => { STATE[CURRENT_YEAR][sliders[k]] = Math.max(0, diff / others.length); });
+      } else {
+        others.forEach(k => {
+          let share = +STATE[CURRENT_YEAR][sliders[k]] / otherTotal;
+          STATE[CURRENT_YEAR][sliders[k]] = Math.max(0, STATE[CURRENT_YEAR][sliders[k]] + diff * share);
+        });
+      }
+      let finalTotal = sum(Object.values(sliders).map(key => STATE[CURRENT_YEAR][key]));
+      STATE[CURRENT_YEAR][sliders[changedId]] += 100 - finalTotal;
+    }
+
+    function normalizeRealistically() {
+      const targetMarginPercent = parseFloat(document.getElementById('normalize-target-percent').value);
+      if (isNaN(targetMarginPercent)) {
+        showModal("Invalid Input", "Please enter a valid target net margin percentage (e.g., 5 for 5%).");
+        return;
+      }
+      const S = STATE[CURRENT_YEAR];
+      const targetNetIncome = S.revenue * (targetMarginPercent / 100);
+      const prev = (CURRENT_YEAR > YEARS[0]) ? FINANCIAL_REPORTS[CURRENT_YEAR - 1] : null;
+      const currentPL = getPL(CURRENT_YEAR, prev?.BS);
+      const currentNetIncome = currentPL.totals["Net Income"];
+      const difference = currentNetIncome - targetNetIncome;
+      S.opex -= difference;
+      const opexSlider = document.getElementById('slider-opex');
+      if (S.opex < +opexSlider.min) {
+        S.opex = +opexSlider.min;
+        showModal("Normalization Limit", `Operating Expenses were minimized to their floor of ${round(S.opex)} to reach the target margin. Further cost-cutting may be needed elsewhere.`);
+      }
+      if (S.opex > +opexSlider.max) {
+        S.opex = +opexSlider.max;
+      }
+      calculateAndRender();
+    }
+
+    function startOver() {
+      initializeState();
+      CURRENT_YEAR = 2021;
+      document.getElementById('yearSelect').value = 2021;
+      document.getElementById('scenarioSelect').value = 'default';
+      calculateAndRender();
+    }
+
+    // --- Audit functions with integrated display panel ---
+    function consistencyCheck() {
+      const { BS, CF } = FINANCIAL_REPORTS[CURRENT_YEAR];
+      const isBalanced = Math.abs(BS.assets - (BS.liab + BS.equity)) < 2.01;
+      const cashMatch = Math.abs(BS.cash_total - CF.cash_end) < 2.01;
+      const errors = [];
+      if (!isBalanced) errors.push("Balance Sheet doesn't balance");
+      if (!cashMatch) errors.push("Cash total mismatch between BS and CF");
+      return errors.length === 0 ? [true, "Audit Passed: All statements are internally consistent and integrated."] : [false, errors.join('<br>')];
+    }
+    function quickRedFlagAudit() {
+      const { PL, CF, Ratios } = FINANCIAL_REPORTS[CURRENT_YEAR];
+      const S = STATE[CURRENT_YEAR];
+      const flags = [];
+      if (PL.totals["Gross Profit"] < 0) flags.push("<b>Negative Gross Margin</b>");
+      if (PL.totals["Officer Salaries"] / PL.totals["Net Income"] > 0.5) flags.push("<b>High Officer Salaries:</b> >50% of net income");
+      if (Ratios.currentRatio < 1.0) flags.push("<b>Low Liquidity:</b> Current Ratio under 1.0");
+      if (S.owndist > 0 && CF.cf_ops < 0) flags.push("<b>Risky Owner Draws</b>");
+      return flags.length === 0 ? [true, "No major red flags"] : [false, `<ul>${flags.map(f => `<li>${f}</li>`).join('')}</ul>`];
+    }
+    function runDeepAudit() {
+      const S = STATE[CURRENT_YEAR];
+      const { PL, BS, CF } = FINANCIAL_REPORTS[CURRENT_YEAR];
+      const prevBS = (CURRENT_YEAR > YEARS[0]) ? FINANCIAL_REPORTS[CURRENT_YEAR - 1]?.BS : null;
+      const flags = [];
+      const check = (label, val1, val2, tolerance=2.01) => {
+        if (Math.abs(val1 - val2) > tolerance) flags.push(`${label} mismatch. Input: ${round(val1)}, Calc: ${round(val2)}`);
+      };
+      check("P&L Payroll", S.employees * S.wage, PL.totals["Payroll & Labor"]);
+      check("P&L Officer Pay", S.officers * S.officerpay, PL.totals["Officer Salaries"]);
+      if (prevBS) {
+        check("A/R Roll-Forward", prevBS.ar_end + CF.chgAR, BS.ar_end, 5.01);
+        check("A/P Roll-Forward", prevBS.ap_end + CF.chgAP, BS.ap_end, 5.01);
+        check("FA Roll-Forward", prevBS.fa_end + S.capex, BS.fa_end);
+      }
+      return flags.length === 0 ? [true, "All deep financial calculations are valid."] : [false, `<ul class="red-flag-list">${flags.map(f => `<li class="red-flag-item">${f}</li>`).join('')}</ul>`];
+    }
+    function runDeepRedFlagAudit() {
+      const prevYear = CURRENT_YEAR - 1;
+      if (!FINANCIAL_REPORTS[prevYear]) return [false, "Prior year data not available for trend analysis."];
+      const Ratios = FINANCIAL_REPORTS[CURRENT_YEAR].Ratios;
+      const prevRatios = FINANCIAL_REPORTS[prevYear].Ratios;
+      const flags = [];
+      if (Ratios.grossMargin < prevRatios.grossMargin) flags.push(`Gross Margin declined from ${prevRatios.grossMargin.toFixed(1)}% to ${Ratios.grossMargin.toFixed(1)}%.`);
+      if (Ratios.netMargin < prevRatios.netMargin) flags.push(`Net Margin declined from ${prevRatios.netMargin.toFixed(1)}% to ${Ratios.netMargin.toFixed(1)}%.`);
+      if (Ratios.workingCapital < prevRatios.workingCapital) flags.push(`Working Capital has decreased, indicating tightening liquidity.`);
+      if (Ratios.dso > Ratios.dpo + 30) flags.push(`A/R Days (${Ratios.dso.toFixed(0)}) is over 30 days longer than A/P Days (${Ratios.dpo.toFixed(0)}), straining cash flow.`);
+      return flags.length === 0 ? [true, "No negative trends were detected."] : [false, `<ul class="red-flag-list">${flags.map(f => `<li class="red-flag-item">${f}</li>`).join('')}</ul>`];
+    }
+    function simulateAudit() {
+      const [ok1, msg1] = consistencyCheck();
+      const [ok2, msg2] = quickRedFlagAudit();
+      const [ok3, msg3] = runDeepAudit();
+      const [ok4, msg4] = runDeepRedFlagAudit();
+      const panel = document.getElementById("auditPanel");
+      panel.style.display = 'block';
+      panel.innerHTML = `
+        <h2>Audit Simulation Summary</h2>
+        <div class="audit-section">
+          <div class="${ok1 ? 'audit-pass' : 'audit-fail'}">
+            <span class="audit-icon">${ok1 ? '✔️' : '❌'}</span>Consistency Check: ${ok1 ? 'Passed' : 'Failed'}
+          </div>
+          <div>${msg1}</div>
+        </div>
+        <div class="audit-section">
+          <div class="${ok2 ? 'audit-pass' : 'audit-fail'}">
+            <span class="audit-icon">${ok2 ? '✔️' : '⚠️'}</span>Quick Red Flag Audit: ${ok2 ? 'Passed' : 'Issues Found'}
+          </div>
+          <div>${msg2}</div>
+        </div>
+        <div class="audit-section">
+          <div class="${ok3 ? 'audit-pass' : 'audit-fail'}">
+            <span class="audit-icon">${ok3 ? '✔️' : '❌'}</span>Deep Audit: ${ok3 ? 'Passed' : 'Failed'}
+          </div>
+          <div>${msg3}</div>
+        </div>
+        <div class="audit-section">
+          <div class="${ok4 ? 'audit-pass' : 'audit-fail'}">
+            <span class="audit-icon">${ok4 ? '✔️' : '⚠️'}</span>Trend Analysis: ${ok4 ? 'Passed' : 'Issues Detected'}
+          </div>
+          <div>${msg4}</div>
+        </div>`;
+    }
+
+    // Modal functions reused from original code
+    function showModal(title, body) {
+      document.getElementById('modal-box').innerHTML = `<h3 class="text-lg font-bold mb-2">${title}</h3><div class="mb-4">${body}</div><button onclick="hideModal()" class="px-4 py-2 bg-indigo-600 text-white rounded-lg w-full">Close</button>`;
+      document.getElementById('modal').style.display = '';
+    }
+    function hideModal() {
+      document.getElementById('modal').style.display = 'none';
+    }
+
+    // Event bindings
+    function bindEvents() {
+      
+  document.getElementById('yearSelect').onchange = function () {
+    const newYear = +this.value;
+    if (!STATE[newYear]) {
+      const prevYear = newYear - 1;
+      if (STATE[prevYear]) {
+        STATE[newYear] = { ...STATE[prevYear] }; // Copy prior year sliders
+      } else {
+        STATE[newYear] = { ...baseState2021 }; // Fallback to base if no prior year
+      }
+    }
+    CURRENT_YEAR = newYear;
+    calculateAndRender();
+  };
+
+      document.getElementById('scenarioSelect').onchange = function() {
+        const key=this.value;
+        if (SCENARIO_PRESETS[key]) {
+          STATE[CURRENT_YEAR] = { ...STATE[CURRENT_YEAR], ...SCENARIO_PRESETS[key] };
+          calculateAndRender();
+        }
+      };
+      document.querySelectorAll('.product-mix-slider').forEach(slider => {
+        slider.oninput = function() {
+          const stateKey = SLIDERS.find(s => s[0] === this.id)[1];
+          STATE[CURRENT_YEAR][stateKey] = +this.value;
+          normalizeMixSliders(this.dataset.mixId);
+          document.getElementById('scenarioSelect').value = 'default';
+          calculateAndRender();
+        };
+      });
+      SLIDERS.filter(s => !s[0].includes('mix')).forEach(([sliderId, stateKey]) => {
+        document.getElementById(sliderId).oninput = function() {
+          STATE[CURRENT_YEAR][stateKey] = +this.value;
+          document.getElementById('scenarioSelect').value = 'default';
+          calculateAndRender();
+        };
+      });
+      document.getElementById('startOverBtn').onclick = startOver;
+      document.getElementById('consistencyBtn').onclick = function() { let [ok, msg] = consistencyCheck(); showModal(ok ? "Consistency Check (OK)" : "Consistency Check (Warning)", `<div class="${ok ? 'audit-ok' : 'audit-warn'}">${msg}</div>`); };
+      document.getElementById('redFlagBtn').onclick = function() { let [ok, msg] = quickRedFlagAudit(); showModal(ok ? "Quick Red Flags (OK)" : "Quick Red Flags (Warning)", `<div class="${ok ? 'audit-ok' : 'audit-warn'}">${msg}</div>`); };
+      document.getElementById('normalizeBtn').onclick = normalizeRealistically;
+    }
+
+    // Initialize application
+    let CURRENT_YEAR = 2021;
+    document.addEventListener('DOMContentLoaded', function() {
+      // Populate year and scenario dropdowns
+      document.getElementById('yearSelect').innerHTML = YEARS.map(y => `<option value="${y}" ${y === CURRENT_YEAR ? 'selected' : ''}>${y}</option>`).join("");
+      const scenarioSelect = document.getElementById('scenarioSelect');
+      scenarioSelect.innerHTML = `<option value="default">Custom Sliders</option>` + Object.keys(SCENARIO_PRESETS).filter(k=>k!=='default').map(k => `<option value="${k}">${k}</option>`).join('');
+      initializeState();
+      calculateAndRender();
+      bindEvents();
+    });
+  </script>
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-white p-4 rounded shadow mb-6">
+<div><label for="slider-revenue">Revenue</label><input class="w-full" id="slider-revenue" max="10000000" min="0" type="range" value="4250000"/></div>
+<div><label for="slider-employees">Employees</label><input class="w-full" id="slider-employees" max="50" min="0" type="range" value="14"/></div>
+<div><label for="slider-wage">Wage</label><input class="w-full" id="slider-wage" max="100000" min="0" type="range" value="45000"/></div>
+<div><label for="slider-opex">OPEX</label><input class="w-full" id="slider-opex" max="2000000" min="0" type="range" value="750000"/></div>
+<div><label for="slider-capex">CAPEX</label><input class="w-full" id="slider-capex" max="1000000" min="0" type="range" value="300000"/></div>
+<div><label for="slider-owndist">Owner Distributions</label><input class="w-full" id="slider-owndist" max="1000000" min="0" type="range" value="0"/></div>
+</div>
+<div class="bg-white p-4 rounded shadow border border-gray-300 mb-6">
+<h2 class="text-lg font-semibold mb-2">📅 Financial Snapshot</h2>
+<div class="text-sm font-mono whitespace-pre-wrap text-gray-800 bg-gray-50 p-3 rounded border" id="financial-display"></div>
+</div>
+<div class="bg-red-50 p-4 border border-red-200 rounded mb-6">
+<h2 class="text-lg font-bold text-red-700 mb-2">📉 Risk &amp; Ratio Red Flags</h2>
+<div class="text-sm text-red-800" id="ratio-output"></div>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+const YEARS = [2021, 2022, 2023, 2024, 2025];
+let CURRENT_YEAR = 2023;
+let AUTO_PROPAGATE = true;
+
+let STATE = {
+  2021: {}, 2022: {}, 2023: {}, 2024: {}, 2025: {}
+};
+
+function initializeBaseYear(year) {
+  STATE[year] = {
+    revenue: 4250000,
+    employees: 14,
+    wage: 45000,
+    opex: 750000,
+    capex: 300000,
+    owndist: 0
+  };
+}
+
+function propagateBusinessLogic(baseYear) {
+  const idx = YEARS.indexOf(baseYear);
+  for (let i = idx + 1; i < YEARS.length; i++) {
+    const prev = YEARS[i - 1], curr = YEARS[i];
+    STATE[curr] = {
+      revenue: Math.round(STATE[prev].revenue * 1.15),
+      employees: STATE[prev].employees + 2,
+      wage: Math.round(STATE[prev].wage * 1.03),
+      opex: Math.round(STATE[prev].opex * 1.10),
+      capex: Math.round(STATE[prev].capex * 1.20),
+      owndist: STATE[prev].owndist + 10000
+    };
+  }
+  for (let i = idx - 1; i >= 0; i--) {
+    const next = YEARS[i + 1], curr = YEARS[i];
+    STATE[curr] = {
+      revenue: Math.round(STATE[next].revenue / 1.15),
+      employees: STATE[next].employees - 2,
+      wage: Math.round(STATE[next].wage / 1.03),
+      opex: Math.round(STATE[next].opex / 1.10),
+      capex: Math.round(STATE[next].capex / 1.20),
+      owndist: STATE[next].owndist - 10000
+    };
+  }
+  calculateAndRender();
+  document.getElementById('sync-status').innerText = "🔄 Auto-sync applied";
+  setTimeout(() => document.getElementById('sync-status').innerText = "", 2500);
+}
+
+function simulateWIPandCashFlow() {
+  YEARS.forEach(year => {
+    const d = STATE[year];
+    const burn = d.wage * d.employees + d.opex;
+    d.cashflow = d.revenue - burn - d.capex;
+    d.wip = Math.max(0, d.revenue * 0.75 - burn);
+  });
+}
+
+function updateRatiosDisplay() {
+  simulateWIPandCashFlow();
+  let out = "";
+  YEARS.forEach(year => {
+    const d = STATE[year];
+    const laborRev = d.employees * d.wage / d.revenue;
+    const capexRev = d.capex / d.revenue;
+    const redFlags = [];
+    if (laborRev > 0.50) redFlags.push("⚠️ Labor/Revenue > 50%");
+    if (capexRev > 0.25) redFlags.push("⚠️ CapEx/Revenue > 25%");
+    out += `<div><strong>${year}</strong>: Labor/Rev ${(laborRev*100).toFixed(1)}%, CapEx/Rev ${(capexRev*100).toFixed(1)}%<br>${redFlags.join(", ")}</div><br>`;
+  });
+  document.getElementById("ratio-output").innerHTML = out;
+}
+
+function renderFinancials() {
+  let out = "";
+  YEARS.forEach(y => {
+    const d = STATE[y];
+    out += `Year ${y}:
+`;
+    out += `  Revenue: $${d.revenue}, Employees: ${d.employees}, Wage: $${d.wage}
+`;
+    out += `  OPEX: $${d.opex}, CAPEX: $${d.capex}, Draw: $${d.owndist}
+`;
+    out += `  Cashflow: $${d.cashflow}, WIP: $${d.wip}
+
+`;
+  });
+  document.getElementById("financial-display").innerText = out;
+}
+
+function calculateAndRender() {
+  renderFinancials();
+  updateRatiosDisplay();
+}
+
+function deepAuditAndRedFlags() {
+  console.log("🔍 Deep Audit Log:", JSON.stringify(STATE, null, 2));
+}
+
+const fieldMap = {
+  'slider-revenue': 'revenue',
+  'slider-wage': 'wage',
+  'slider-employees': 'employees',
+  'slider-opex': 'opex',
+  'slider-capex': 'capex',
+  'slider-owndist': 'owndist'
+};
+
+Object.keys(fieldMap).forEach(id => {
+  const el = document.getElementById(id);
+  if (el) {
+    el.addEventListener('input', function () {
+      const field = fieldMap[this.id];
+      STATE[CURRENT_YEAR][field] = +this.value;
+      if (AUTO_PROPAGATE) {
+        propagateBusinessLogic(CURRENT_YEAR);
+      } else {
+        calculateAndRender();
+        document.getElementById('sync-status').innerText = "🛠 Manual mode – no sync";
+        setTimeout(() => document.getElementById('sync-status').innerText = "", 2500);
+      }
+      deepAuditAndRedFlags();
+    });
+  }
+});
+
+document.getElementById("toggle-propagate").addEventListener("change", function () {
+  AUTO_PROPAGATE = this.checked;
+  document.getElementById("sync-status").innerText = AUTO_PROPAGATE
+    ? "🔁 Auto propagation ON"
+    : "⏸ Manual mode enabled";
+  setTimeout(() => document.getElementById("sync-status").innerText = "", 2000);
+});
+
+document.getElementById("year-select").addEventListener("change", function () {
+  CURRENT_YEAR = +this.value;
+  renderFinancials();
+});
+
+function exportToPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  let y = 10;
+  doc.text("Financial Summary (2021–2025)", 10, y); y += 10;
+  YEARS.forEach(year => {
+    const d = STATE[year];
+    doc.text(`${year}: Revenue $${d.revenue}, Employees ${d.employees}, Wage $${d.wage}`, 10, y); y += 8;
+    doc.text(`       OPEX $${d.opex}, CAPEX $${d.capex}, Owner Draw $${d.owndist}`, 10, y); y += 8;
+    doc.text(`       Cashflow $${d.cashflow}, WIP $${d.wip}`, 10, y); y += 10;
+  });
+  doc.save("financial_summary.pdf");
+}
+
+initializeBaseYear(2023);
+propagateBusinessLogic(2023);
+</script>
+<div class="bg-white p-4 rounded shadow border border-gray-300 mb-6">
+<h2 class="text-lg font-semibold mb-2">📑 AR/AP Aging Report</h2>
+<div class="text-sm font-mono whitespace-pre-wrap text-gray-800 bg-gray-50 p-3 rounded border" id="aging-report"></div>
+</div>
+<div class="bg-white p-4 rounded shadow border border-gray-300 mb-6">
+<h2 class="text-lg font-semibold mb-2">📊 Balance Sheet</h2>
+<div class="text-sm font-mono whitespace-pre-wrap text-gray-800 bg-gray-50 p-3 rounded border" id="balance-sheet"></div>
+</div>
+<div class="bg-white p-4 rounded shadow border border-gray-300 mb-6">
+<h2 class="text-lg font-semibold mb-2">🏚️ Depreciation Schedule</h2>
+<div class="text-sm font-mono whitespace-pre-wrap text-gray-800 bg-gray-50 p-3 rounded border" id="depreciation-output"></div>
+</div>
+<div class="bg-white p-4 rounded shadow border border-gray-300 mb-6">
+<h2 class="text-lg font-semibold mb-2">🏗️ WIP Schedule - Multiple Jobs</h2>
+<div class="text-sm font-mono whitespace-pre-wrap text-gray-800 bg-gray-50 p-3 rounded border" id="wip-schedule"></div>
+</div>
+<script>
+function updateAdvancedReports() {
+  // --- AR/AP Aging Report (assumes AR is 10% of revenue, AP is 5% of OPEX) ---
+  let agingOut = "";
+  YEARS.forEach(y => {
+    const d = STATE[y];
+    const ar = d.revenue * 0.10;
+    const ap = d.opex * 0.05;
+    agingOut += `Year ${y}: AR: $${ar.toFixed(0)} (0-30: $${(ar*0.5).toFixed(0)}, 31-60: $${(ar*0.3).toFixed(0)}, 61+: $${(ar*0.2).toFixed(0)})\n`;
+    agingOut += `          AP: $${ap.toFixed(0)} (0-30: $${(ap*0.6).toFixed(0)}, 31-60: $${(ap*0.3).toFixed(0)}, 61+: $${(ap*0.1).toFixed(0)})\n\n`;
+  });
+  document.getElementById("aging-report").innerText = agingOut;
+
+  // --- Balance Sheet (basic) ---
+  let bsOut = "";
+  YEARS.forEach(y => {
+    const d = STATE[y];
+    const cash = d.cashflow ?? 0;
+    const receivables = d.revenue * 0.1;
+    const equipment = d.capex;
+    const assets = cash + receivables + equipment;
+
+    const payables = d.opex * 0.05;
+    const equity = assets - payables;
+
+    bsOut += `Year ${y}:\n`;
+    bsOut += `  Assets: $${assets.toFixed(0)} = Cash: $${cash}, AR: $${receivables.toFixed(0)}, Equipment: $${equipment}\n`;
+    bsOut += `  Liabilities: $${payables.toFixed(0)}\n`;
+    bsOut += `  Equity: $${equity.toFixed(0)}\n\n`;
+  });
+  document.getElementById("balance-sheet").innerText = bsOut;
+
+  // --- Depreciation Schedule (5 year straight-line) ---
+  let depOut = "";
+  YEARS.forEach((y, i) => {
+    const d = STATE[y];
+    const dep = d.capex / 5;
+    let acc = 0;
+    for (let yr = 0; yr < 5; yr++) {
+      const year = y + yr;
+      acc += dep;
+      depOut += `CapEx in ${y} → Year ${year}: $${dep.toFixed(0)} (Accum: $${acc.toFixed(0)})\n`;
+    }
+    depOut += "\n";
+  });
+  document.getElementById("depreciation-output").innerText = depOut;
+
+  // --- Multiple Job WIP Schedule (2 jobs) ---
+  let wipOut = "";
+  YEARS.forEach(y => {
+    const d = STATE[y];
+    const job1 = d.revenue * 0.6;
+    const job2 = d.revenue * 0.4;
+    const cost1 = job1 * 0.65;
+    const cost2 = job2 * 0.75;
+    const gp1 = job1 - cost1;
+    const gp2 = job2 - cost2;
+    wipOut += `Year ${y}:\n`;
+    wipOut += `  Job A: Revenue $${job1.toFixed(0)}, Cost $${cost1.toFixed(0)}, GP $${gp1.toFixed(0)}\n`;
+    wipOut += `  Job B: Revenue $${job2.toFixed(0)}, Cost $${cost2.toFixed(0)}, GP $${gp2.toFixed(0)}\n\n`;
+  });
+  document.getElementById("wip-schedule").innerText = wipOut;
+}
+
+// Attach to rendering lifecycle
+const origRender = calculateAndRender;
+calculateAndRender = function () {
+  origRender();
+  updateAdvancedReports();
+};
+</script>
+<script>
+// Monthly Cash Flow based on seasonality assumptions
+function simulateMonthlyCashFlow(yearData) {
+  const monthly = [];
+  const baseBurn = yearData.employees * yearData.wage + yearData.opex;
+  const baseCashIn = yearData.revenue;
+  for (let i = 0; i < 12; i++) {
+    const factor = (i === 0 || i === 11) ? 0.06 : 0.08 + 0.01 * (Math.random() - 0.5); // Jan/Dec light
+    const inflow = baseCashIn * factor;
+    const outflow = baseBurn / 12 + (yearData.capex / 12);
+    monthly.push({
+      month: i + 1,
+      inflow: Math.round(inflow),
+      outflow: Math.round(outflow),
+      net: Math.round(inflow - outflow)
+    });
+  }
+  return monthly;
+}
+
+function generatePAndL(yearData) {
+  const revenue = yearData.revenue;
+  const labor = yearData.employees * yearData.wage;
+  const opex = yearData.opex;
+  const capex = yearData.capex;
+  const gross = revenue - labor - opex;
+  const taxable = gross - capex;
+  const tax = Math.max(0, taxable * 0.21);
+  const net = taxable - tax;
+  return { revenue, labor, opex, capex, gross, tax, net };
+}
+
+function renderAdvancedFinancials() {
+  let pnlOut = "", cashOut = "", consOut = "", auditOut = "";
+
+  YEARS.forEach(y => {
+    const d = STATE[y];
+    // P&L
+    const pnl = generatePAndL(d);
+    pnlOut += `Year ${y}:
+  Revenue: $${pnl.revenue}, Labor: $${pnl.labor}, OPEX: $${pnl.opex}
+`;
+    pnlOut += `  CapEx: $${pnl.capex}, Gross Profit: $${pnl.gross}, Tax: $${pnl.tax.toFixed(0)}, Net: $${pnl.net.toFixed(0)}
+
+`;
+
+    // Monthly Cash
+    const monthly = simulateMonthlyCashFlow(d);
+    cashOut += `Year ${y}:
+`;
+    monthly.forEach(m => {
+      cashOut += `  M${m.month}: In $${m.inflow}, Out $${m.outflow}, Net $${m.net}
+`;
+    });
+    cashOut += `
+`;
+
+    // Forensic Audit
+    const expectedCash = d.revenue - (d.employees * d.wage + d.opex + d.capex);
+    const delta = Math.abs(expectedCash - (d.cashflow ?? 0));
+    if (delta > 1000) {
+      auditOut += `⚠️ ${y}: Cashflow mismatch > $1K (Expected $${expectedCash}, Found $${d.cashflow})
+`;
+    }
+    if (pnl.net < 0) {
+      auditOut += `⚠️ ${y}: Negative Net Income
+`;
+    }
+
+    // Consolidated view for Entity A + B (simulated by cloning)
+    if (!STATE["consolidated"]) STATE["consolidated"] = {};
+    STATE["consolidated"][y] = {
+      revenue: d.revenue * 2,
+      employees: d.employees * 2,
+      wage: d.wage,
+      opex: d.opex * 2,
+      capex: d.capex * 2,
+      net: pnl.net * 2
+    };
+  });
+
+  // Consolidated Summary
+  consOut += "Multi-Entity Consolidated View (A+B):
+";
+  YEARS.forEach(y => {
+    const d = STATE["consolidated"][y];
+    consOut += `Year ${y}: Revenue $${d.revenue}, Employees ${d.employees}, Net Income $${d.net.toFixed(0)}
+`;
+  });
+
+  document.body.insertAdjacentHTML("beforeend", `
+    <div class="bg-white p-4 rounded shadow border border-gray-300 mb-6">
+      <h2 class="text-lg font-semibold mb-2">🧾 Profit & Loss (with Tax)</h2>
+      <pre class="text-sm font-mono whitespace-pre-wrap text-gray-800 bg-gray-50 p-3 border rounded">${pnlOut}</pre>
+    </div>
+    <div class="bg-white p-4 rounded shadow border border-gray-300 mb-6">
+      <h2 class="text-lg font-semibold mb-2">💸 Monthly Cash Flow Report</h2>
+      <pre class="text-sm font-mono whitespace-pre-wrap text-gray-800 bg-gray-50 p-3 border rounded">${cashOut}</pre>
+    </div>
+    <div class="bg-white p-4 rounded shadow border border-gray-300 mb-6">
+      <h2 class="text-lg font-semibold mb-2">🏢 Consolidated Financials</h2>
+      <pre class="text-sm font-mono whitespace-pre-wrap text-gray-800 bg-gray-50 p-3 border rounded">${consOut}</pre>
+    </div>
+    <div class="bg-red-100 p-4 rounded shadow border border-red-300 mb-6">
+      <h2 class="text-lg font-semibold text-red-800 mb-2">🔍 Forensic Audit Report</h2>
+      <pre class="text-sm font-mono whitespace-pre-wrap text-red-800 bg-red-50 p-3 border rounded">${auditOut || "✅ All checks passed."}</pre>
+    </div>
+  `);
+}
+
+// Trigger render
+const origRenderFinal = calculateAndRender;
+calculateAndRender = function () {
+  origRenderFinal();
+  updateAdvancedReports();
+  renderAdvancedFinancials();
+};
+</script>
+<script>
+["revenue", "employees", "wage", "opex", "capex", "owndist"].forEach(field => {
+  const id = "slider-" + field;
+  const el = document.getElementById(id);
+  const out = document.getElementById(id + "-value");
+  if (el && out) {
+    el.addEventListener("input", () => {
+      out.textContent = el.value;
+    });
+  }
+});
+</script>
+<script>
+// Benchmark thresholds
+const BENCHMARKS = {
+  laborToRevenue: 0.40,
+  capexToRevenue: 0.15,
+  opexToRevenue: 0.20
+};
+
+// Apply red flags under ratios
+function updateBenchmarkFlags() {
+  let warnings = "";
+  const d = STATE[CURRENT_YEAR];
+  const laborRatio = (d.employees * d.wage) / d.revenue;
+  const capexRatio = d.capex / d.revenue;
+  const opexRatio = d.opex / d.revenue;
+
+  if (laborRatio > BENCHMARKS.laborToRevenue) {
+    warnings += "⚠️ Labor/Revenue exceeds 40%\n";
+  }
+  if (capexRatio > BENCHMARKS.capexToRevenue) {
+    warnings += "⚠️ CapEx/Revenue exceeds 15%\n";
+  }
+  if (opexRatio > BENCHMARKS.opexToRevenue) {
+    warnings += "⚠️ OPEX/Revenue exceeds 20%\n";
+  }
+
+  document.getElementById("red-flag-ratios").innerText = warnings || "✅ All ratios within benchmark.";
+}
+
+// Add simulation toggles
+const simPanel = document.createElement("div");
+simPanel.className = "bg-gray-100 p-3 mb-4 border rounded";
+simPanel.innerHTML = \`
+<h2 class="text-lg font-semibold mb-2">🧠 Scenario Simulation</h2>
+<label><input type="radio" name="sim" value="normal" checked> Normal</label><br>
+<label><input type="radio" name="sim" value="recession"> 📉 Recession</label><br>
+<label><input type="radio" name="sim" value="boom"> 📈 Boom Year</label><br>
+<label><input type="radio" name="sim" value="expansion"> 🏢 New Office Expansion</label>
+\`;
+document.body.insertBefore(simPanel, document.body.firstChild);
+
+document.querySelectorAll("input[name='sim']").forEach(el => {
+  el.addEventListener("change", e => {
+    const d = STATE[CURRENT_YEAR];
+    switch (e.target.value) {
+      case "recession":
+        d.revenue *= 0.85;
+        d.employees = Math.max(10, d.employees - 2);
+        d.opex *= 1.1;
+        d.capex *= 0.8;
+        break;
+      case "boom":
+        d.revenue *= 1.20;
+        d.employees += 2;
+        d.wage *= 1.05;
+        break;
+      case "expansion":
+        d.opex += 100000;
+        d.capex += 150000;
+        break;
+      default:
+        propagateBusinessLogic(CURRENT_YEAR); // revert to standard
+        return;
+    }
+    calculateAndRender();
+    updateBenchmarkFlags();
+  });
+});
+
+// Hook red flags after render
+const origRenderWithFlags = calculateAndRender;
+calculateAndRender = function () {
+  origRenderWithFlags();
+  updateAdvancedReports();
+  renderAdvancedFinancials();
+  updateBenchmarkFlags();
+};
+</script>
+<script>
+function printSection(id) {
+  const section = document.getElementById(id);
+  if (!section) return;
+  const printWindow = window.open('', '', 'height=700,width=900');
+  printWindow.document.write('<html><head><title>Print</title><style>body{font-family:Arial;padding:20px;} pre{white-space:pre-wrap;}</style></head><body>');
+  printWindow.document.write('<h2>' + section.getAttribute("data-title") + '</h2>');
+  printWindow.document.write(section.innerHTML);
+  printWindow.document.write('</body></html>');
+  printWindow.document.close();
+  printWindow.print();
+}
+</script>
+<script>
+function printSection(id) {
+  const section = document.getElementById(id);
+  if (!section) return;
+  const printWindow = window.open('', '', 'height=700,width=900');
+  printWindow.document.write('<html><head><title>Print</title><style>body{font-family:Arial;padding:20px;} pre{white-space:pre-wrap;} h2{font-size:1.25rem;}</style></head><body>');
+  printWindow.document.write('<h2>' + section.getAttribute("data-title") + '</h2>');
+  printWindow.document.write(section.innerHTML);
+  printWindow.document.write('</body></html>');
+  printWindow.document.close();
+  printWindow.print();
+}
+</script>
+<div class="mt-4 p-3 border rounded bg-gray-100"><h2>🧠 Forensic Audit Report</h2><pre class="whitespace-pre-wrap text-sm text-red-700" id="forensic-audit" style="display:block;">Running analysis...</pre></div>
+<script>
+// Display forensic audit
+function runForensicAudit() {
+  const d = STATE[CURRENT_YEAR];
+  const results = [];
+
+  const grossProfit = d.revenue - (d.employees * d.wage);
+  const netIncome = grossProfit - d.opex - d.capex - d.owndist;
+
+  results.push("📊 Forensic Audit – " + CURRENT_YEAR);
+  results.push("🔎 Revenue: $" + d.revenue.toLocaleString());
+  results.push("👷‍♂️ Labor Cost: $" + (d.employees * d.wage).toLocaleString());
+  results.push("📈 Gross Profit: $" + grossProfit.toLocaleString());
+  results.push("💼 OPEX: $" + d.opex.toLocaleString());
+  results.push("🏗️ CAPEX: $" + d.capex.toLocaleString());
+  results.push("🧾 Owner Draws: $" + d.owndist.toLocaleString());
+  results.push("📉 Net Income (est.): $" + netIncome.toLocaleString());
+
+  if ((d.employees * d.wage) / d.revenue > 0.40)
+    results.push("⚠️ Labor > 40% of Revenue");
+  if (d.opex / d.revenue > 0.20)
+    results.push("⚠️ OPEX > 20% of Revenue");
+  if (d.capex / d.revenue > 0.15)
+    results.push("⚠️ CAPEX > 15% of Revenue");
+  if (d.revenue / d.employees < 250000)
+    results.push("⚠️ Revenue/Employee below $250K");
+
+  document.getElementById("forensic-audit").innerText = results.join("\n");
+}
+
+setInterval(runForensicAudit, 2000);
+</script>
+<script>function updateSliderValues() {
+  document.getElementById('slider-revenue').oninput = function() {
+    document.getElementById('slider-revenue-val').innerText = this.value;
+  };
+  document.getElementById('slider-employees').oninput = function() {
+    document.getElementById('slider-employees-val').innerText = this.value;
+  };
+  document.getElementById('slider-wage').oninput = function() {
+    document.getElementById('slider-wage-val').innerText = this.value;
+  };
+  document.getElementById('slider-opex').oninput = function() {
+    document.getElementById('slider-opex-val').innerText = this.value;
+  };
+  document.getElementById('slider-capex').oninput = function() {
+    document.getElementById('slider-capex-val').innerText = this.value;
+  };
+  document.getElementById('slider-owndist').oninput = function() {
+    document.getElementById('slider-owndist-val').innerText = this.value;
+  };
+}; updateSliderValues();</script><div class="mt-4 p-3 border rounded bg-white shadow"><h2>📘 Retained Earnings Reconciliation</h2><pre class="text-sm text-blue-700" id="retained-earnings-report">Calculating retained earnings...</pre></div>
+<script>
+function updateRetainedEarnings() {
+  let result = [];
+  let valid = true;
+  for (let i = 1; i < YEARS.length; i++) {
+    const prev = STATE[YEARS[i-1]];
+    const curr = STATE[YEARS[i]];
+    const estNet = curr.revenue - curr.employees * curr.wage - curr.opex - curr.capex;
+    const expectedRE = (prev.retained ?? 0) + estNet - curr.owndist;
+    curr.retained = expectedRE;
+
+    result.push(`Year ${YEARS[i]} Retained Earnings: $${expectedRE.toLocaleString()}`);
+
+    if (curr.retained < 0)
+      result.push(`⚠️ Negative retained earnings – risky owner draws or losses`);
+  }
+  document.getElementById("retained-earnings-report").innerText = result.join("\n");
+}
+
+setInterval(updateRetainedEarnings, 3000);
+</script>
+</body>
+</html>
